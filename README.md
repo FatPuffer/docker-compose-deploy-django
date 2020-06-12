@@ -10,7 +10,7 @@
 - 修改`ALLOWED_HOSTS = ['宿主机的真实IP地址', 'localhost', '127.0.0.1']`
 - 修改`DEBUG = False`
 
-##### 3. 进入项目文件加docker_project
+##### 3. 进入项目文件加docker_project，找到`docker-compose.yml`文件
 
 - 执行以下语句构建镜像
 
