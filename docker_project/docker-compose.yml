@@ -1,0 +1,62 @@
+version: "3"
+
+volumes: # 自定义数据卷，默认位于宿主机/var/lib/docker/volumes内
+  docker_django_mysql_vol: 
+  docker_django_media_vol: 
+
+services:
+  db-mysql:
+    image: mysql:5.7
+    environment:
+      - MYSQL_ROOT_PASSWORD=password@123  # root用户密码
+      - MYSQL_DATABASE=docker_django  # 库名
+      - MYSQL_USER=admin  # 用户名
+      - MYSQL_PASSWORD=password@  # admin用户密码
+
+    volumes:
+      - docker_django_mysql_vol:/var/lib/mysql:rw
+      - ./compose/mysql/conf/my.cnf:/etc/mysql/my.cnf  # 挂载配置文件
+      - /etc/localtime:/etc/localtime:ro
+      - ./compose/mysql/init/:/docker-entrypoint-initdb.d/  # 挂载数据初始化sql脚本
+    expose:
+      - "3306"
+    ports:
+      - "3306:3306" # 与配置文件保持一致
+    restart: always
+ 
+  web:
+    build: ./docker_django  # 使用docker_django目录下的Dockerfile
+    expose:
+      - "8000"
+    volumes:
+      - docker_django_media_vol:/var/www/html/docker_django/media  # 以数据卷挂载容器内用户上传媒体文件
+      - ./docker_django:/var/www/html/docker_django  # 挂载项目代码
+      # - ./compose/uwsgi:/tmp  # 挂载uwsgilinks:
+    links:
+      - db-mysql
+    depends_on:  # 依赖关系
+      - db-mysql
+    environment:
+      - DEBUG=False
+    restart: always
+    tty: true
+    stdin_open: true
+
+  nginx:
+    build: ./compose/nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    expose:
+      - "80"
+    volumes:
+      - docker_django_media_vol:/usr/share/nginx/html/media  # 挂载用户上传媒体文件
+      - ./docker_django/static:/usr/share/nginx/html/static  # 挂载静态文件
+      - ./compose/nginx/ssl:/usr/share/nginx/ssl  # 挂载ssl证书目录
+      - ./compose/nginx/log:/var/log/nginx  # 挂载日志
+     
+    links:
+      - web
+    depends_on:
+      - web
+    restart: always
